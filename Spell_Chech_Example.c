@@ -6,13 +6,13 @@
 #include <Elementary.h>
 #include <Efl_Ui.h>
 
-static Eo * attribute_factory = NULL;
+static Eo *attribute_factory = NULL;
 static Eina_List *handles_list = NULL;
-static Eo * cursor_start = NULL;
-static Eo * cursor_end = NULL;
+static Eo *cursor_start = NULL;
+static Eo *cursor_end = NULL;
 
 /************ Spell Check Logic ******************/
-static const char* dictionary[] = {
+static const char *dictionary[] = {
    "hello",
    "world",
    "one",
@@ -21,12 +21,12 @@ static const char* dictionary[] = {
 };
 
 static Eina_Bool
-_spell_check_word(const char* str)
+_spell_check_word(const char *str)
 {
    int i;
-   for (i = 0 ; i < sizeof(dictionary) / sizeof(char*); i++)
+   for (i = 0 ; i < sizeof(dictionary) / sizeof(char *); i++)
      {
-        if (!strcmp(str,dictionary[i]))
+        if (!strcmp(str, dictionary[i]))
           return EINA_TRUE;
      }
    return EINA_FALSE;
@@ -43,7 +43,7 @@ _spell_check_word(const char* str)
 /************ EFL Spell Check Logic ******************/
 
 static Efl2_Text_Attribute_Handle*
-mark_misspelled(Eo *start,Eo *end)
+mark_misspelled(Eo *start, Eo *end)
 {
    Efl2_Text_Attribute_Handle *handle = efl2_text_attribute_factory_insert(attribute_factory, start, end);
    efl2_text_attribute_factory_ref(handle);
@@ -65,7 +65,7 @@ mark_clear()
 static Eina_Bool
 _ui_text_spell_check_cb(void *data, const Efl_Event *event EINA_UNUSED)
 {
-   Eo * ui_text= (Eo *)data;
+   Eo *ui_text= (Eo *)data;
    Eina_Bool correct;
 
    efl2_text_style_underline_clear(attribute_factory);
@@ -79,10 +79,10 @@ _ui_text_spell_check_cb(void *data, const Efl_Event *event EINA_UNUSED)
 
 
    //ali.m Ugly code to iterate words
-   while (!efl2_text_cursor_equal(cursor_start,cursor_end))
+   while (!efl2_text_cursor_equal(cursor_start, cursor_end))
      {
-        const char * word = efl2_text_cursor_range_text_get(cursor_start,cursor_end);
-        correct = _spell_check_word(efl2_text_cursor_range_text_get(cursor_start,cursor_end));
+        const char *word = efl2_text_cursor_range_text_get(cursor_start, cursor_end);
+        correct = _spell_check_word(efl2_text_cursor_range_text_get(cursor_start, cursor_end));
         if (!correct)
         {
            handles_list = eina_list_append(handles_list, mark_misspelled(cursor_start, cursor_end));
