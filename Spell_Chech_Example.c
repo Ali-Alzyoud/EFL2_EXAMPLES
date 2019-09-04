@@ -6,7 +6,8 @@
 #include <Elementary.h>
 #include <Efl_Ui.h>
 
-
+Eo * attribute_factory = NULL;
+Eina_List *handles_list = NULL;
 
 /************ Spell Check Logic ******************/
 const char* dictionary[] = {
@@ -38,43 +39,67 @@ _spell_check_word(const char* str)
 
 
 /************ EFL Spell Check Logic ******************/
+
+static Efl2_Text_Attribute_Handle*
+mark_misspelled(Eo *start,Eo *end)
+{
+   efl2_text_style_underline_color_set(attribute_factory, 255, 0, 0, 255);
+   Efl2_Text_Attribute_Handle handle = efl2_text_attribute_factory_insert(attribute_factory, start, end);
+   Efl2_Text_Attribute_Handle *handle_ref = malloc(sizeof(Efl2_Text_Attribute_Handle));
+   memcpy(ref_handle,&handle,sizeof(Efl2_Text_Attribute_Handle));
+   efl2_text_attribute_factory_ref(handle_ref);
+   return handle_ref;
+}
+
+static void
+mark_clear()
+{
+   Eina_List *l;
+   EINA_LIST_FOREACH(handles_list, l, handle)
+     {
+        efl2_text_attribute_factory_unref(handle);
+        efl2_text_attribute_factory_del(handle);
+        free(handle);
+     }
+   handles_list = eina_list_free(handles_list);
+}
+
 static Eina_Bool
 _ui_text_spell_check_cb(void *data, const Efl_Event *event EINA_UNUSED)
 {
    Eo * ui_text= (Eo *)data;
    Eina_Bool correct;
-   
-   //ali.m how to clean previous spelling text attributes ?
-   ??????
-
-   //ali.m I am not sure if this is right to create factory
-   Eo * factory = efl_add(EFL2_TEXT_ATTRIBUTE_FACTORY, efl_main_loop_get());
-   efl2_text_style_underline_color_set(factory,255,0,0,255);
 
    Eo * cursor_start = efl2_ui_text_cursor_new(ui_text);
-   Eo * cursor_end = efl2_text_cursor_copy(cursor_start);
+   Eo * cursor_end = efl2_ui_text_cursor_new(ui_text);
+
+   mark_clear()
+
+   efl2_text_cursor_copy(cursor_start, cursor_end);
    efl_text_cursor_word_end(cursor_end);
 
 
    //ali.m Ugly code to iterate words
-   while (!efl2_text_cursor_equal(cursor_start,cursor_end))
+   while (!efl2_text_cursor_equal(cursor_start,cursor_end))cd 
      {
         const char * word = efl2_text_cursor_range_text_get(cursor_start,cursor_end);
         correct = _spell_check_word(efl2_text_cursor_range_text_get(cursor_start,cursor_end));
         if (!correct)
         {
-           //ali.m what to do with return handle ?
-           Efl2_Text_Attribute_Handle handle = efl2_text_attribute_factory_insert(factory,cursor_start,cursor_end);
+           handles_list = eina_list_append(handles_list, mark_misspelled(cursor_start, cursor_end));
         }
         
         int word_start = efl2_text_cursor_position_get(cursor_start);
         efl2_text_cursor_char_next(cursor_end);
         efl2_text_cursor_word_end(cursor_end);
-        efl2_text_cursor_position_set(cursor_start,efl2_text_cursor_position_get(cursor_end));
+        efl2_text_cursor_copy(cursor_end, cursor_start);
         efl2_text_cursor_word_start(cursor_start);
         if (word_start == efl2_text_cursor_position_get(cursor_start))
           break;
      }
+
+   efl_del(cursor_start);
+   efl_del(cursor_end);
 }
 /****************************************************/
 
@@ -105,6 +130,8 @@ efl_main(void *data EINA_UNUSED, const Efl_Event *ev EINA_UNUSED)
    box = efl_add(EFL_UI_BOX_CLASS, win,
                 efl_content_set(win, efl_added),
                 efl_gfx_hint_size_min_set(efl_added, EINA_SIZE2D(360, 240)));
+
+   attribute_factory = efl_add(EFL2_TEXT_ATTRIBUTE_FACTORY, efl_main_loop_get());
 
    efl_add(EFL2_UI_TEXT_CLASS, box,
            efl2_text_markup_set(efl_added, "Hello World"),
