@@ -45,9 +45,11 @@ _spell_check_word(const char *str)
 static Efl2_Text_Attribute_Handle*
 mark_misspelled(Eo *start, Eo *end)
 {
-   Efl2_Text_Attribute_Handle *handle = efl2_text_attribute_factory_insert(attribute_factory, start, end);
-   efl2_text_attribute_factory_ref(handle);
-   return handle;
+   return efl2_text_attribute_factory_ref(
+                     efl2_text_attribute_factory_insert(attribute_factory,
+                                                       start,
+                                                       end)
+                                        );
 }
 
 static void
@@ -84,9 +86,9 @@ _ui_text_spell_check_cb(void *data, const Efl_Event *event EINA_UNUSED)
         const char *word = efl2_text_cursor_range_text_get(cursor_start, cursor_end);
         correct = _spell_check_word(efl2_text_cursor_range_text_get(cursor_start, cursor_end));
         if (!correct)
-        {
-           handles_list = eina_list_append(handles_list, mark_misspelled(cursor_start, cursor_end));
-        }
+          {
+             handles_list = eina_list_append(handles_list, mark_misspelled(cursor_start, cursor_end));
+          }
         
         int word_start = efl2_text_cursor_position_get(cursor_start);
         efl2_text_cursor_char_next(cursor_end);
