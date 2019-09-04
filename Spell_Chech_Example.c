@@ -6,13 +6,13 @@
 #include <Elementary.h>
 #include <Efl_Ui.h>
 
-Eo * attribute_factory = NULL;
-Eina_List *handles_list = NULL;
-Eo * cursor_start = NULL;
-Eo * cursor_end = NULL;
+static Eo * attribute_factory = NULL;
+static Eina_List *handles_list = NULL;
+static Eo * cursor_start = NULL;
+static Eo * cursor_end = NULL;
 
 /************ Spell Check Logic ******************/
-const char* dictionary[] = {
+static const char* dictionary[] = {
    "hello",
    "world",
    "one",
