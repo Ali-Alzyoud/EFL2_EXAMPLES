@@ -43,12 +43,9 @@ _spell_check_word(const char* str)
 static Efl2_Text_Attribute_Handle*
 mark_misspelled(Eo *start,Eo *end)
 {
-   efl2_text_style_underline_color_set(attribute_factory, 255, 0, 0, 255);
-   Efl2_Text_Attribute_Handle handle = efl2_text_attribute_factory_insert(attribute_factory, start, end);
-   Efl2_Text_Attribute_Handle *handle_ref = malloc(sizeof(Efl2_Text_Attribute_Handle));
-   memcpy(ref_handle,&handle,sizeof(Efl2_Text_Attribute_Handle));
-   efl2_text_attribute_factory_ref(handle_ref);
-   return handle_ref;
+   Efl2_Text_Attribute_Handle *handle = efl2_text_attribute_factory_insert(attribute_factory, start, end);
+   efl2_text_attribute_factory_ref(handle);
+   return handle;
 }
 
 static void
@@ -59,7 +56,6 @@ mark_clear()
      {
         efl2_text_attribute_factory_unref(handle);
         efl2_text_attribute_factory_del(handle);
-        free(handle);
      }
    handles_list = eina_list_free(handles_list);
 }
@@ -73,6 +69,9 @@ _ui_text_spell_check_cb(void *data, const Efl_Event *event EINA_UNUSED)
    Eo * cursor_start = efl2_ui_text_cursor_new(ui_text);
    Eo * cursor_end = efl2_ui_text_cursor_new(ui_text);
 
+   efl2_text_style_underline_clear(attribute_factory);
+   efl2_text_style_underline_color_set(attribute_factory, 255, 0, 0, 255);
+
    mark_clear()
 
    efl2_text_cursor_copy(cursor_start, cursor_end);
@@ -80,7 +79,7 @@ _ui_text_spell_check_cb(void *data, const Efl_Event *event EINA_UNUSED)
 
 
    //ali.m Ugly code to iterate words
-   while (!efl2_text_cursor_equal(cursor_start,cursor_end))cd 
+   while (!efl2_text_cursor_equal(cursor_start,cursor_end))
      {
         const char * word = efl2_text_cursor_range_text_get(cursor_start,cursor_end);
         correct = _spell_check_word(efl2_text_cursor_range_text_get(cursor_start,cursor_end));
