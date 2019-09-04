@@ -8,6 +8,8 @@
 
 Eo * attribute_factory = NULL;
 Eina_List *handles_list = NULL;
+Eo * cursor_start = NULL;
+Eo * cursor_end = NULL;
 
 /************ Spell Check Logic ******************/
 const char* dictionary[] = {
@@ -66,15 +68,13 @@ _ui_text_spell_check_cb(void *data, const Efl_Event *event EINA_UNUSED)
    Eo * ui_text= (Eo *)data;
    Eina_Bool correct;
 
-   Eo * cursor_start = efl2_ui_text_cursor_new(ui_text);
-   Eo * cursor_end = efl2_ui_text_cursor_new(ui_text);
-
    efl2_text_style_underline_clear(attribute_factory);
    efl2_text_style_underline_color_set(attribute_factory, 255, 0, 0, 255);
 
    mark_clear()
 
-   efl2_text_cursor_copy(cursor_start, cursor_end);
+   efl2_text_cursor_paragraph_first(cursor_start);
+   efl2_text_cursor_paragraph_first(cursor_end);
    efl_text_cursor_word_end(cursor_end);
 
 
@@ -96,9 +96,6 @@ _ui_text_spell_check_cb(void *data, const Efl_Event *event EINA_UNUSED)
         if (word_start == efl2_text_cursor_position_get(cursor_start))
           break;
      }
-
-   efl_del(cursor_start);
-   efl_del(cursor_end);
 }
 /****************************************************/
 
@@ -117,7 +114,7 @@ _gui_quit_cb(void *data EINA_UNUSED, const Efl_Event *event EINA_UNUSED)
 EAPI_MAIN void
 efl_main(void *data EINA_UNUSED, const Efl_Event *ev EINA_UNUSED)
 {
-   Eo *win, *box;
+   Eo *win, *box, ui_text;
 
    win = efl_add(EFL_UI_WIN_CLASS, efl_main_loop_get(),
                  efl_ui_win_type_set(efl_added, EFL_UI_WIN_TYPE_BASIC),
@@ -132,18 +129,21 @@ efl_main(void *data EINA_UNUSED, const Efl_Event *ev EINA_UNUSED)
 
    attribute_factory = efl_add(EFL2_TEXT_ATTRIBUTE_FACTORY, efl_main_loop_get());
 
-   efl_add(EFL2_UI_TEXT_CLASS, box,
-           efl2_text_markup_set(efl_added, "Hello World"),
-           efl_gfx_hint_weight_set(efl_added, 1.0, 0.9),
-           efl_gfx_hint_align_set(efl_added, 0.5, 0.5),
-           efl_pack(box, efl_added));
+   ui_text = efl_add(EFL2_UI_TEXT_CLASS, box,
+                     efl2_text_markup_set(efl_added, "Hello World"),
+                     efl_gfx_hint_weight_set(efl_added, 1.0, 0.9),
+                     efl_gfx_hint_align_set(efl_added, 0.5, 0.5),
+                     efl_pack(box, efl_added));
+
+   cursor_start = efl2_ui_text_cursor_new(ui_text);
+   cursor_end = efl2_ui_text_cursor_new(ui_text);
 
    efl_add(EFL_UI_BUTTON_CLASS, box,
            efl_text_set(efl_added, "Spell Check"),
            efl_gfx_hint_weight_set(efl_added, 1.0, 0.1),
            efl_pack(box, efl_added),
            efl_event_callback_add(efl_added, EFL_INPUT_EVENT_CLICKED,
-                                  _ui_text_spell_check_cb, efl_added));
+                                  _ui_text_spell_check_cb, ui_text));
 
    efl_add(EFL_UI_BUTTON_CLASS, box,
            efl_text_set(efl_added, "Quit"),
