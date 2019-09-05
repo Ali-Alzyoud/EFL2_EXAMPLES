@@ -73,6 +73,10 @@ _ui_text_spell_check_cb(void *data, const Efl_Event *event EINA_UNUSED)
    efl2_text_style_underline_clear(attribute_factory);
    efl2_text_style_underline_color_set(attribute_factory, 255, 0, 0, 255);
 
+   /*
+    * Easies way is to clear all previous handles
+    * To be more efficient you can reuse previous handles
+   */
    mark_clear()
 
    efl2_text_cursor_paragraph_first(cursor_start);
@@ -80,7 +84,7 @@ _ui_text_spell_check_cb(void *data, const Efl_Event *event EINA_UNUSED)
    efl_text_cursor_word_end(cursor_end);
 
 
-   //ali.m Ugly code to iterate words
+   // iterate words using cursors
    while (!efl2_text_cursor_equal(cursor_start, cursor_end))
      {
         const char *word = efl2_text_cursor_range_text_get(cursor_start, cursor_end);
@@ -128,7 +132,6 @@ efl_main(void *data EINA_UNUSED, const Efl_Event *ev EINA_UNUSED)
    box = efl_add(EFL_UI_BOX_CLASS, win,
                 efl_content_set(win, efl_added),
                 efl_gfx_hint_size_min_set(efl_added, EINA_SIZE2D(360, 240)));
-
    attribute_factory = efl_add(EFL2_TEXT_ATTRIBUTE_FACTORY, efl_main_loop_get());
 
    ui_text = efl_add(EFL2_UI_TEXT_CLASS, box,
