@@ -1,3 +1,13 @@
+/*********** Spell Check Marker *****************
+ * This is simple example shows how to implement Spell check
+ * marker on text using EFL Attribute Factory
+ * 
+ * For simplicity sake for this example it do not
+ * cache the attribute handles (which is inefficient for large
+ * chunk of text)
+ * 
+ * Correct spell words founded in dictionary array
+*/
 
 #define EFL_EO_API_SUPPORT 1
 #define EFL_BETA_API_SUPPORT 1
@@ -6,10 +16,13 @@
 #include <Elementary.h>
 #include <Efl_Ui.h>
 
-
+static Eo *attribute_factory = NULL;
+static Eina_List *handles_list = NULL;
+static Eo *cursor_start = NULL;
+static Eo *cursor_end = NULL;
 
 /************ Spell Check Logic ******************/
-const char* dictionary[] = {
+static const char *dictionary[] = {
    "hello",
    "world",
    "one",
@@ -18,12 +31,12 @@ const char* dictionary[] = {
 };
 
 static Eina_Bool
-_spell_check_word(const char* str)
+_spell_check_word(const char *str)
 {
    int i;
-   for (i = 0 ; i < sizeof(dictionary) / sizeof(char*); i++)
+   for (i = 0 ; i < sizeof(dictionary) / sizeof(char *); i++)
      {
-        if (!strcmp(str,dictionary[i]))
+        if (!strcmp(str, dictionary[i]))
           return EINA_TRUE;
      }
    return EINA_FALSE;
@@ -38,39 +51,63 @@ _spell_check_word(const char* str)
 
 
 /************ EFL Spell Check Logic ******************/
+
+static Efl2_Text_Attribute_Handle*
+mark_misspelled(Eo *start, Eo *end)
+{
+   return efl2_text_attribute_factory_ref(
+                     efl2_text_attribute_factory_insert(attribute_factory,
+                                                       start,
+                                                       end)
+                                        );
+}
+
+static void
+mark_clear()
+{
+   Eina_List *l;
+   EINA_LIST_FOREACH(handles_list, l, handle)
+     {
+        efl2_text_attribute_factory_unref(handle);
+        efl2_text_attribute_factory_del(handle);
+     }
+   handles_list = eina_list_free(handles_list);
+}
+
 static Eina_Bool
 _ui_text_spell_check_cb(void *data, const Efl_Event *event EINA_UNUSED)
 {
-   Eo * ui_text= (Eo *)data;
+   Eo *ui_text= (Eo *)data;
    Eina_Bool correct;
-   
-   //ali.m how to clean previous spelling text attributes ?
-   ??????
 
-   //ali.m I am not sure if this is right to create factory
-   Eo * factory = efl_add(EFL2_TEXT_ATTRIBUTE_FACTORY, efl_main_loop_get());
-   efl2_text_style_underline_color_set(factory,255,0,0,255);
+   efl2_text_style_underline_clear(attribute_factory);
+   efl2_text_style_underline_color_set(attribute_factory, 255, 0, 0, 255);
 
-   Eo * cursor_start = efl2_ui_text_cursor_new(ui_text);
-   Eo * cursor_end = efl2_text_cursor_copy(cursor_start);
+   /*
+    * Easies way is to clear all previous handles
+    * To be more efficient you can reuse previous handles
+   */
+   mark_clear()
+
+   efl2_text_cursor_paragraph_first(cursor_start);
+   efl2_text_cursor_paragraph_first(cursor_end);
    efl_text_cursor_word_end(cursor_end);
 
 
-   //ali.m Ugly code to iterate words
-   while (!efl2_text_cursor_equal(cursor_start,cursor_end))
+   // iterate words using cursors
+   while (!efl2_text_cursor_equal(cursor_start, cursor_end))
      {
-        const char * word = efl2_text_cursor_range_text_get(cursor_start,cursor_end);
-        correct = _spell_check_word(efl2_text_cursor_range_text_get(cursor_start,cursor_end));
+        const char *word = efl2_text_cursor_range_text_get(cursor_start, cursor_end);
+        correct = _spell_check_word(efl2_text_cursor_range_text_get(cursor_start, cursor_end));
         if (!correct)
-        {
-           //ali.m what to do with return handle ?
-           Efl2_Text_Attribute_Handle handle = efl2_text_attribute_factory_insert(factory,cursor_start,cursor_end);
-        }
+          {
+             handles_list = eina_list_append(handles_list, mark_misspelled(cursor_start, cursor_end));
+          }
         
         int word_start = efl2_text_cursor_position_get(cursor_start);
         efl2_text_cursor_char_next(cursor_end);
         efl2_text_cursor_word_end(cursor_end);
-        efl2_text_cursor_position_set(cursor_start,efl2_text_cursor_position_get(cursor_end));
+        efl2_text_cursor_copy(cursor_end, cursor_start);
         efl2_text_cursor_word_start(cursor_start);
         if (word_start == efl2_text_cursor_position_get(cursor_start))
           break;
@@ -93,7 +130,7 @@ _gui_quit_cb(void *data EINA_UNUSED, const Efl_Event *event EINA_UNUSED)
 EAPI_MAIN void
 efl_main(void *data EINA_UNUSED, const Efl_Event *ev EINA_UNUSED)
 {
-   Eo *win, *box;
+   Eo *win, *box, ui_text;
 
    win = efl_add(EFL_UI_WIN_CLASS, efl_main_loop_get(),
                  efl_ui_win_type_set(efl_added, EFL_UI_WIN_TYPE_BASIC),
@@ -105,19 +142,23 @@ efl_main(void *data EINA_UNUSED, const Efl_Event *ev EINA_UNUSED)
    box = efl_add(EFL_UI_BOX_CLASS, win,
                 efl_content_set(win, efl_added),
                 efl_gfx_hint_size_min_set(efl_added, EINA_SIZE2D(360, 240)));
+   attribute_factory = efl_add(EFL2_TEXT_ATTRIBUTE_FACTORY, efl_main_loop_get());
 
-   efl_add(EFL2_UI_TEXT_CLASS, box,
-           efl2_text_markup_set(efl_added, "Hello World"),
-           efl_gfx_hint_weight_set(efl_added, 1.0, 0.9),
-           efl_gfx_hint_align_set(efl_added, 0.5, 0.5),
-           efl_pack(box, efl_added));
+   ui_text = efl_add(EFL2_UI_TEXT_CLASS, box,
+                     efl2_text_markup_set(efl_added, "Hello World"),
+                     efl_gfx_hint_weight_set(efl_added, 1.0, 0.9),
+                     efl_gfx_hint_align_set(efl_added, 0.5, 0.5),
+                     efl_pack(box, efl_added));
+
+   cursor_start = efl2_ui_text_cursor_new(ui_text);
+   cursor_end = efl2_ui_text_cursor_new(ui_text);
 
    efl_add(EFL_UI_BUTTON_CLASS, box,
            efl_text_set(efl_added, "Spell Check"),
            efl_gfx_hint_weight_set(efl_added, 1.0, 0.1),
            efl_pack(box, efl_added),
            efl_event_callback_add(efl_added, EFL_INPUT_EVENT_CLICKED,
-                                  _ui_text_spell_check_cb, efl_added));
+                                  _ui_text_spell_check_cb, ui_text));
 
    efl_add(EFL_UI_BUTTON_CLASS, box,
            efl_text_set(efl_added, "Quit"),
