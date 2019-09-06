@@ -1,3 +1,13 @@
+/*********** Spell Check Marker *****************
+ * This is simple example shows how to implement Spell check
+ * marker on text using EFL Attribute Factory
+ * 
+ * For simplicity sake for this example it do not
+ * cache the attribute handles (which is inefficient for large
+ * chunk of text)
+ * 
+ * Correct spell words founded in dictionary array
+*/
 
 #define EFL_EO_API_SUPPORT 1
 #define EFL_BETA_API_SUPPORT 1
