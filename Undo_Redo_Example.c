@@ -20,9 +20,10 @@
 
 /******************** Undo/Redo logic ********************/
 
+
 #define MAX_HISTORY_SIZE 5
 
-static int history_index = 0;
+static Eina_List *history_index = NULL;
 static Eina_List *history_list = NULL;
 
 static char *
@@ -30,14 +31,14 @@ _history_next_get(void)
 {
    int size = eina_list_count(history_list);
 
-   if (0 == size || (size - 1) == history_index)
+   if (0 == size || !eina_list_next(history_index))
    {
       return NULL;
    }
 
-   history_index++;
+   history_index = eina_list_next(history_index);
 
-   return (char *)eina_list_data_get(eina_list_nth_list(history_list, history_index));
+   return (char *)eina_list_data_get(history_index);
 }
 
 static char *
@@ -45,14 +46,14 @@ _history_prev_get(void)
 {
    int size = eina_list_count(history_list);
 
-   if (0 == size || 0 == history_index)
+   if (0 == size || !eina_list_prev(history_index))
    {
       return NULL;
    }
 
-   history_index--;
+   history_index = eina_list_prev(history_index);
 
-   return (char *)eina_list_data_get(eina_list_nth_list(history_list, history_index));
+   return (char *)eina_list_data_get(history_index);
 }
 
 static void
@@ -68,21 +69,23 @@ _history_append(char *text)
    if (!new_text)
       return;
 
-   strcpy(new_text, text);
+   memcpy(new_text, text, strlen(text) + 1);
 
-   if (0 != size && history_index + 1 < size)
+   Eina_List *ll;
+   history_list = eina_list_split_list(history_list, history_index,
+                                       &ll);
+
+   char *n_text = NULL;
+   EINA_LIST_FREE(ll, n_text)
    {
-      char *n_text = NULL;
-      Eina_List *nl = eina_list_nth_list(history_list, history_index + 1), *l;
-
-      EINA_LIST_FOREACH(nl, l, n_text)
-      {
-         nl = eina_list_remove(l, n_text);
-         free(n_text);
-      }
+      free(n_text);
    }
-   history_list = eina_list_append(history_list, new_text);
-   history_index++;
+   history_index = eina_list_append(history_index, new_text);
+   history_index = eina_list_last(history_index);
+   if (history_list == NULL)
+   {
+      history_list = history_index;
+   }
 }
 
 /*********************************************************/
