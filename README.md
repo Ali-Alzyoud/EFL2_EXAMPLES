@@ -1,5 +1,5 @@
 ## Examples How to use EFL Text new functinality
-~~- Highlighting spelling mistakes~~
+- ~~Highlighting spelling mistakes~~
 - Undo/redo
 - Rich Text Editor
 - Names Tags detection (using @ followed by username)
@@ -7,7 +7,7 @@
 
 
 Others
-- Filers (Numbers only)
+- Filters (Numbers only)
 - Text in specific format/Layout  (ZipCode/phoneNumber/IpAddress like 99-9999 '- auto inserted')
 - Text tool-tips (When mouse cursor above certian area on Text Widget)
 - PlaceHolder text (styles)
@@ -15,3 +15,7 @@ Others
 - Clickable Hyperlinks, Open hyperlink events
 - Auto Capital First letter on paragraph when inserted by user (on/off)
 - Write emojies as text and auto converted (like :+) converted to smile face)
+- Autocorrection
+- Suggestions (Maybe suggestions list)
+- Multi insert (Multi cursors)
+- Column selection (Column mode)
