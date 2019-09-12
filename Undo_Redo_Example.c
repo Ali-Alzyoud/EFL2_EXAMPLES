@@ -88,12 +88,8 @@ _history_append(char *text)
    }
 }
 
-/*********************************************************/
-
-/*************** EFL Undo/Redo Callback(s) ***************/
-
 static void
-_ui_text_undo_common(Eo* ui_text) {
+_user_undo(Eo* ui_text) {
    char *text = _history_prev_get();
 
    if ( text ) {
@@ -102,7 +98,7 @@ _ui_text_undo_common(Eo* ui_text) {
 }
 
 static void
-_ui_text_redo_common(Eo* ui_text) {
+_user_redo(Eo* ui_text) {
    char *text = _history_next_get();
 
    if ( text ) {
@@ -110,32 +106,41 @@ _ui_text_redo_common(Eo* ui_text) {
    }
 }
 
+/*********************************************************/
+
+
+
+
+/*************** EFL Undo/Redo Callback(s) ***************/
+
 static void
 _ui_text_undo_cb(void *data, const Efl_Event *event EINA_UNUSED)
 {
    Eo *ui_text = data;
-   _ui_text_undo_common(ui_text);
+   _user_undo(ui_text);
 }
 
 static void
 _ui_text_redo_cb(void *data, const Efl_Event *event EINA_UNUSED)
 {
    Eo *ui_text = data;
-   _ui_text_redo_common(ui_text);
+   _user_redo(ui_text);
 }
 
 static void
 _ui_text_undo_clicked_cb(void *data, const Efl_Event *event EINA_UNUSED)
 {
    Eo *ui_text = data;
-   _ui_text_undo_common(ui_text);
+   //ali.m How to force ui_text to fire undo event ?
+   //I do not want to hack it by direcly call _ui_text_undo_common(ui_text);
 }
 
 static void
 _ui_text_redo_clicked_cb(void *data, const Efl_Event *event EINA_UNUSED)
 {
    Eo *ui_text = data;
-   _ui_text_redo_common(ui_text);
+   //ali.m How to force ui_text to fire redo event ?
+   //I do not want to hack it by direcly call _ui_text_redo_common(ui_text);
 }
 
 static void
@@ -149,16 +154,11 @@ _ui_text_changed_cb(void *data, const Efl_Event *event EINA_UNUSED)
    }
 }
 
-static void
-_ui_text_update_text_clicked_cb(void *data, const Efl_Event *event EINA_UNUSED)
-{
-   Eo *ui_text = data;
-   Efl2_Text_Cursor *curs = efl2_text_raw_editable_main_cursor_get(ui_text);
-
-   efl2_text_cursor_text_insert(curs, "EFL");
-}
-
 /*********************************************************/
+
+
+
+
 
 /******************* Application Logic *******************/
 
@@ -195,6 +195,9 @@ efl_main(void *data EINA_UNUSED, const Efl_Event *ev EINA_UNUSED)
    efl_event_callback_add(ui_text, EFL2_CANVAS_TEXT_EVENT_CHANGED, _ui_text_changed_cb, ui_text);
 
    // Register callback when redu event called to recall future state (if exists)
+   // ali.m
+   // (1) EFL2_TEXT_RAW_EDITABLE_EVENT_REDO_REQUEST will be available for efl.ui.text ?
+   // (2) I think user expect event name be like  EFL2_UI_TEXT_EVENT_REDO_REQUEST ?
    efl_event_callback_add(ui_text, EFL2_TEXT_RAW_EDITABLE_EVENT_REDO_REQUEST, _ui_text_redo_cb, ui_text);
 
    // Register callback when undo event called to restore previous state (if exists)
@@ -213,13 +216,6 @@ efl_main(void *data EINA_UNUSED, const Efl_Event *ev EINA_UNUSED)
            efl_pack(box, efl_added),
            efl_event_callback_add(efl_added, EFL_INPUT_EVENT_CLICKED,
                                   _ui_text_redo_clicked_cb, ui_text));
-
-   efl_add(EFL_UI_BUTTON_CLASS, box,
-           efl_text_set(efl_added, "Update Text"),
-           efl_gfx_hint_weight_set(efl_added, 1.0, 0.1),
-           efl_pack(box, efl_added),
-           efl_event_callback_add(efl_added, EFL_INPUT_EVENT_CLICKED,
-                                  _ui_text_update_text_clicked_cb, ui_text));
 
    efl_add(EFL_UI_BUTTON_CLASS, box,
            efl_text_set(efl_added, "Quit"),
