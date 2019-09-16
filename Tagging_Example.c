@@ -11,9 +11,9 @@
 #include <Elementary.h>
 #include <Efl_Ui.h>
 
-static Eina_List *sugg_tags_list = NULL;
-static Eina_Bool tags_list_active = EINA_FALSE;
-static size_t tags_starting_pos = 0;
+static Eina_List *sugg_tags_list = NULL;        // This list will contain suggested tags
+static Eina_Bool tags_list_active = EINA_FALSE; // This variable will be True if tags list is activated
+static size_t tags_starting_pos = 0;            // This variable contains start position for word request tags
 
 /************ Tagging Logic ******************/
 
@@ -47,7 +47,7 @@ _tags_list_get(const char *query)
    char *query_lo = calloc(size + 1, sizeof(char));
    char *tag_lo;
    char *tag;
-
+   size_t ii;
    memcpy(query_lo, query, size + 1);
    eina_str_tolower(&query_lo);
 
@@ -58,34 +58,34 @@ _tags_list_get(const char *query)
       memcpy(tag, tags[ii], tag_size);      \
    } while (0);
 
-   for (size_t ii = 0; ii < LIST_SIZE(tags); ii++)
-   {
-      size_t tag_size = strlen(tags[ii]) + 1;
-      // Skip tags with less charactars than query
-      if (size > tag_size - 1)
-         continue;
+   for (ii = 0; ii < LIST_SIZE(tags); ii++)
+     {
+        size_t tag_size = strlen(tags[ii]) + 1;
+        // Skip tags with less charactars than query
+        if (size > tag_size - 1)
+           continue;
 
-      tag_lo = calloc(tag_size, sizeof(char));
-      memcpy(tag_lo, tags[ii], tag_size);
-      eina_str_tolower(&tag_lo);
+        tag_lo = calloc(tag_size, sizeof(char));
+        memcpy(tag_lo, tags[ii], tag_size);
+        eina_str_tolower(&tag_lo);
 
-      if (
-          // Add tags that has query substring
-          0 == strncmp(tag_lo, query_lo, size))
-      {
-         COPY_TAGS_ITEM(ii);
-         tags_list = eina_list_prepend(tags_list, tag);
-      }
-      else if (
-          strstr(tag_lo, query_lo))
-      {
-         COPY_TAGS_ITEM(ii);
-         tags_list = eina_list_append(tags_list, tag);
-      }
+        if (
+            // Add tags that has query substring
+            0 == strncmp(tag_lo, query_lo, size))
+          {
+             COPY_TAGS_ITEM(ii);
+             tags_list = eina_list_prepend(tags_list, tag);
+          }
+        else if (
+            strstr(tag_lo, query_lo))
+          {
+             COPY_TAGS_ITEM(ii);
+             tags_list = eina_list_append(tags_list, tag);
+          }
 
-      free(tag_lo);
-      tag_lo = NULL;
-   }
+        free(tag_lo);
+        tag_lo = NULL;
+     }
 
    free(query_lo);
 
@@ -100,12 +100,12 @@ _tags_list_clear(Eina_List *list)
 {
    char *str;
    if (!list)
-      return;
+     return;
 
    EINA_LIST_FREE(list, str)
-   {
-      free(str);
-   }
+     {
+        free(str);
+     }
 }
 /**************************************************/
 
@@ -115,9 +115,9 @@ static void
 _update_suggestion_list(const char *query)
 {
    if (sugg_tags_list != NULL)
-   {
-      _tags_list_clear(sugg_tags_list);
-   }
+     {
+        _tags_list_clear(sugg_tags_list);
+     }
    sugg_tags_list = _tags_list_get(query);
 }
 
@@ -139,33 +139,41 @@ _ui_text_changed_cb(void *data, const Efl_Event *event)
    efl2_text_cursor_position_set(curs, info->position);
 
    if (tags_list_active)
-   { // update suggestion list
-      Efl2_Text_Cursor *curs2;
-      efl2_text_cursor_copy(curs, curs2);
-      efl2_text_cursor_word_start(curs);
-      efl2_text_cursor_word_end(curs2);
+     { // update suggestion list
+         Efl2_Text_Cursor *curs2 = efl2_ui_text_cursor_new(ui_text);
+        efl2_text_cursor_copy(curs, curs2);
+        efl2_text_cursor_word_start(curs);
+        efl2_text_cursor_word_end(curs2);
 
-      if (tags_starting_pos != efl2_text_cursor_position_get(curs))
-      {
-         _hide_suggestion_list();
-      }
-      else
-      {
-         _update_suggestion_list(efl2_text_cursor_range_text_get(curs, curs2));
-      }
+        if (tags_starting_pos != efl2_text_cursor_position_get(curs))
+          {
+             _hide_suggestion_list();
+          }
+        else
+          {
+             if (efl2_text_cursor_equal(curs, curs2))
+               {
+                  _update_suggestion_list(""); // Initialize list with all available tags, TODO: list must have max limit!
+               }
+             else
+               {
+                  efl2_text_cursor_char_next(curs); // skip @ character
+                  _update_suggestion_list(efl2_text_cursor_range_text_get(curs, curs2));
+               }
+          }
 
-      efl_del(curs2);
-   }
+        efl_del(curs2);
+     }
    else if (info->insert &&
             info->length == 1 && // One character which is @
             strcmp(info->content, "@") &&
             !efl2_text_cursor_word_start(curs)) // if cursor does not moved then it is new word
-   {
-      tags_list_active = EINA_TRUE;
-      tags_starting_pos = info->position;
+     {
+        tags_list_active = EINA_TRUE;
+        tags_starting_pos = info->position;
 
-      _update_suggestion_list(""); // Initialize list with all available tags, TODO: list must have max limit!
-   }
+        _update_suggestion_list(""); // Initialize list with all available tags, TODO: list must have max limit!
+     }
    efl_del(curs);
 }
 
@@ -174,24 +182,23 @@ _ui_text_cursor_changed_cb(void *data, const Efl_Event *event EINA_UNUSED)
 {
    Eo *ui_text = data;
 
-   Efl2_Text_Cursor *curs = efl2_text_raw_editable_main_cursor_get(ui_text);
+   Efl2_Text_Cursor *cur = efl2_text_raw_editable_main_cursor_get(ui_text);
 
    if (tags_list_active)
-   {
-      if (tags_starting_pos == efl2_text_cursor_position_get(curs))
-      {
-         _hide_suggestion_list();
-      }
-      else
-      {
-         efl2_text_cursor_word_start(curs);
-
-         if (tags_starting_pos != efl2_text_cursor_position_get(curs))
-         {
-            _hide_suggestion_list();
-         }
-      }
-   }
+     {
+        if (tags_starting_pos == efl2_text_cursor_position_get(cur))
+          {
+             _hide_suggestion_list();
+          }
+        else
+          {
+             efl2_text_cursor_word_start(cur);
+             if (tags_starting_pos != efl2_text_cursor_position_get(cur))
+               {
+                  _hide_suggestion_list();
+               }
+          }
+     }
 }
 
 /****************************************************/
