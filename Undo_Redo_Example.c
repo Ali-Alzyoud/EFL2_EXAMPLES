@@ -20,96 +20,162 @@
 
 /******************** Undo/Redo logic ********************/
 
-
 #define MAX_HISTORY_SIZE 5
 
 static Eina_List *history_index = NULL;
 static Eina_List *history_list = NULL;
+static Eina_Bool history_list_can_merge = EINA_FALSE;
 
-static char *
+static Efl2_Text_Change_Info *
 _history_next_get(void)
 {
    int size = eina_list_count(history_list);
 
    if (0 == size || !eina_list_next(history_index))
-   {
-      return NULL;
-   }
+     {
+        return NULL;
+     }
 
    history_index = eina_list_next(history_index);
 
-   return (char *)eina_list_data_get(history_index);
+   return (Efl2_Text_Change_Info *)eina_list_data_get(history_index);
 }
 
-static char *
+static Efl2_Text_Change_Info *
 _history_prev_get(void)
 {
    int size = eina_list_count(history_list);
 
    if (0 == size || !eina_list_prev(history_index))
-   {
-      return NULL;
-   }
+     {
+        return NULL;
+     }
 
    history_index = eina_list_prev(history_index);
 
-   return (char *)eina_list_data_get(history_index);
+   return (Efl2_Text_Change_Info *)eina_list_data_get(history_index);
 }
 
 static void
-_history_append(char *text)
+_history_append(Efl2_Text_Change_Info *info)
 {
    int size = eina_list_count(history_list);
-   char *new_text = NULL;
+   Efl2_Text_Change_Info *new_info = NULL;
 
-   if (!text)
-      return;
+   if (size == MAX_HISTORY_SIZE)
+     {
+        return;
+     }
 
-   new_text = calloc(sizeof(char), strlen(text) + 1);
-   if (!new_text)
-      return;
-
-   memcpy(new_text, text, strlen(text) + 1);
+   if (!new_info)
+        return;
 
    Eina_List *ll;
    history_list = eina_list_split_list(history_list, history_index,
                                        &ll);
 
-   char *n_text = NULL;
-   EINA_LIST_FREE(ll, n_text)
-   {
-      free(n_text);
-   }
-   history_index = eina_list_append(history_index, new_text);
+   Efl2_Text_Change_Info *inf = NULL;
+   EINA_LIST_FREE(history_list, inf)
+     {
+        eina_stringshare_del(inf->content);
+        free(inf);
+     }
+
+   new_info = (Efl2_Text_Change_Info *)calloc(1, sizeof(*new_info));
+   if (!new_info)
+        return;
+
+   memcpy(new_info, info, sizeof(*new_info));
+
+   Efl2_Text_Change_Info *head_inf = eina_list_data_get(history_index);
+
+   eina_stringshare_ref(new_info->content);
+
+   if (history_list_can_merge && (new_info->insert == head_inf->insert))
+        new_info->merge = EINA_TRUE;
+
+   history_index = eina_list_append(history_index, new_info);
+
+
    history_index = eina_list_last(history_index);
    if (history_list == NULL)
-   {
-      history_list = history_index;
-   }
+     {
+        history_list = history_index;
+     }
+
+   history_list_can_merge = EINA_TRUE;
 }
 
 static void
-_user_undo(Eo* ui_text) {
-   char *text = _history_prev_get();
+_user_undo(Eo *ui_text)
+{
+   Efl2_Text_Change_Info *info = _history_prev_get();
 
-   if ( text ) {
-      efl2_text_markup_set(ui_text, text);
-   }
+   while (info)
+     {
+        _user_undo_redo_do(ui_text, info, EINA_FALSE);
+
+        if (info->merge)
+          {
+             info = _history_prev_get();
+          }
+        else
+          {
+             break;
+          }
+     }
+}
+
+
+static void
+_user_undo_redo_do(Eo *ui_text, Efl2_Text_Change_Info *inf, Eina_Bool undo)
+{
+   printf("%s: %s", (undo) ? "Undo" : "Redo",
+         inf->content);
+
+   Efl_Text_Cursor *mcur = efl2_text_raw_editable_main_cursor_get(ui_text);
+   efl2_text_cursor_position_set(mcur, inf->position);
+
+   if ((inf->insert && undo) || (!inf->insert && !undo))
+     {
+        Efl_Text_Cursor  *end;
+        end = efl2_ui_text_cursor_new(ui_text);
+        efl2_text_cursor_position_set(end, inf->position + inf->length);
+
+        efl2_text_cursor_range_delete(mcur, end);
+        efl_del(end);
+     }
+   else
+     {
+        efl2_text_cursor_text_insert(mcur, inf->content);
+     }
+
+   /* No matter what, once we did an undo/redo we don't want to merge,
+    * even if we got backt to the top of the stack. */
+   history_list_can_merge = EINA_FALSE;
 }
 
 static void
-_user_redo(Eo* ui_text) {
-   char *text = _history_next_get();
+_user_redo(Eo *ui_text)
+{
+   Efl2_Text_Change_Info *info = _history_next_get();
 
-   if ( text ) {
-      efl2_text_markup_set(ui_text, text);
-   }
+   while (info)
+     {
+        _user_undo_redo_do(ui_text, info, EINA_TRUE);
+
+        if (info->merge)
+          {
+             info = _history_next_get();
+          }
+        else
+          {
+             break;
+          }
+     }
 }
 
 /*********************************************************/
-
-
-
 
 /*************** EFL Undo/Redo Callback(s) ***************/
 
@@ -147,18 +213,17 @@ static void
 _ui_text_changed_cb(void *data, const Efl_Event *event EINA_UNUSED)
 {
    Eo *ui_text = data;
-   char *text = efl2_text_markup_get(ui_text);
 
-   if ( text ) {
-      _history_append(text);
-   }
+   _history_append((Efl2_Text_Change_Info *)event);
+}
+
+static void
+_ui_text_cur_changed_cb(void *data EINA_UNUSED, const Efl_Event *event EINA_UNUSED)
+{
+   history_list_can_merge = EINA_FALSE;
 }
 
 /*********************************************************/
-
-
-
-
 
 /******************* Application Logic *******************/
 
@@ -192,7 +257,9 @@ efl_main(void *data EINA_UNUSED, const Efl_Event *ev EINA_UNUSED)
                      efl_pack(box, efl_added));
 
    // Register callback when text changed to track new changes
-   efl_event_callback_add(ui_text, EFL2_CANVAS_TEXT_EVENT_CHANGED, _ui_text_changed_cb, ui_text);
+   efl_event_callback_add(ui_text, EFL2_TEXT_RAW_EDITABLE_CHANGED_USER, _ui_text_changed_cb, ui_text);
+
+   efl_event_callback_add(ui_text, EFL2_TEXT_RAW_EDITABLE_CURSOR_CHANGED_MANUAL, _ui_text_cur_changed_cb, ui_text);
 
    // Register callback when redu event called to recall future state (if exists)
    // ali.m
