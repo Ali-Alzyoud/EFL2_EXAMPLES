@@ -133,7 +133,7 @@ static void
 _ui_text_changed_cb(void *data, const Efl_Event *event)
 {
    Eo *ui_text = data;
-   Efl_Ui_Text_Change_Info *info = (Efl_Ui_Text_Change_Info *)event;
+   Efl2_Text_Change_Info *info = (Efl2_Text_Change_Info *)event;
 
    Efl2_Text_Cursor *curs = efl2_ui_text_cursor_new(ui_text);
    efl2_text_cursor_position_set(curs, info->position);
