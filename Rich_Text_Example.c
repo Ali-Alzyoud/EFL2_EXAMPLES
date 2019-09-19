@@ -1,3 +1,14 @@
+/*********** Rich Text Editor *****************
+ * This is simple example shows how to implement Rich Text Editor
+ * using EFL Attribute Factory & Text Cursor
+ * 
+ * For simplicity sake for this example it do not
+ * cache the attribute handles (which is inefficient for large
+ * chunk of text)
+ * 
+ * Apply font/text atrributes on text (bold, italic, color, font-size)
+*/
+
 #define EFL_BETA_API_SUPPORT 1
  
 #include <Eina.h>
