@@ -15,7 +15,7 @@
 
 static Eo *attribute_factory = NULL;
 static Eo *check_bold, *check_italic, *check_red, *check_30;
-static Eo *cursor_main, *cursor_start, *cursor_end;
+static Eo *cursor_main, *cursor_start, *cursor_end, *sel_start, *sel_end;
 
 static void
 _apply_attribute(Eo *ui_text)
@@ -26,13 +26,11 @@ _apply_attribute(Eo *ui_text)
       2- If the main cursor is inside a word, we insert the attribute for the whole word
       3- If outside word, newly inserted text at current posistion should have the chosen attributes 
     */
-   efl2_text_raw_editable_selection_cursors_get(ui_text, &cursor_start, &cursor_end); // Can be called on ui_text ?
-   if (cursor_start == cursor_end) // if no selection
+   
+   if (efl2_text_cursor_equal(sel_start, sel_end)) // if no selection
      {
-         cursor_main = efl2_text_raw_editable_main_cursor_get(ui_text);
-
-         efl2_text_cursor_copy(cursor_start, cursor_main);
-         efl2_text_cursor_copy(cursor_end, cursor_main);
+         efl2_text_cursor_copy(cursor_main, cursor_start);
+         efl2_text_cursor_copy(cursor_main, cursor_end);
 
          efl2_text_cursor_word_start(cursor_start);
          efl2_text_cursor_word_end(cursor_end);
@@ -53,7 +51,7 @@ _apply_attribute(Eo *ui_text)
            }
      }
      else
-       efl2_text_attribute_factory_insert(attribute_factory, cursor_start, cursor_end);
+       efl2_text_attribute_factory_insert(attribute_factory, sel_start, sel_end);
 }
 
 static void
@@ -72,12 +70,12 @@ _update_check_boxes()
 }
 
 static void
-_attribute_text_get(Eo *cursor_start, Eo *cursor_end)
+_attribute_text_get(Eo *cur_start, Eo *cur_end)
 {
    Efl2_Text_Attribute_Handle *handle;
    Eina_Iterator *itr;
 
-   itr = efl2_text_attribute_factory_range_attributes_get(cursor_start, cursor_end); // Does it work if cursor_start == cursor_end ?
+   itr = efl2_text_attribute_factory_range_attributes_get(cur_start, cur_end); // Does it work if cur_start == cur_end ?
             
    if (eina_iterator_next((itr), (void **)(void *)&(handle)))   // just work on first handle for simplicity
      efl2_text_attribute_factory_load(attribute_factory, handle);   // is this correct ? if attribute_factory updated will the handle be updated ? We want attribute copy only
@@ -90,11 +88,11 @@ _gui_selection_changed_cb(void *data EINA_UNUSED, const Efl_Event *event EINA_UN
 {
    Eo *ui_text = (Eo*)data;
 
-   efl2_text_raw_editable_selection_cursors_get(ui_text, &cursor_start, &cursor_end);
-   if (cursor_start != cursor_end)
+
+   if (!efl2_text_cursor_equal(sel_start, sel_end))
      {
         efl2_text_attribute_factory_reset(attribute_factory);
-        _attribute_text_get(cursor_start, cursor_end);
+        _attribute_text_get(sel_start, sel_end);
         _update_check_boxes();
      }
 }
@@ -104,11 +102,9 @@ _gui_cursor_changed_cb(void *data EINA_UNUSED, const Efl_Event *event EINA_UNUSE
 {
    Eo *ui_text = (Eo*)data;
 
-   efl2_text_raw_editable_selection_cursors_get(ui_text, &cursor_start, &cursor_end);
-   if (cursor_start == cursor_end) // only if no selection do work (I'm not sure if it can be called while doing selection as cursor_changed event not working at all !)
+   if (efl2_text_cursor_equal(sel_start, sel_end)) // only if no selection do work (I'm not sure if it can be called while doing selection as cursor_changed event not working at all !)
      {
         efl2_text_attribute_factory_reset(attribute_factory);
-        cursor_main = efl2_text_raw_editable_main_cursor_get(ui_text);
         _attribute_text_get(cursor_main, cursor_main);
         _update_check_boxes();
      }
@@ -205,9 +201,11 @@ efl_main(void *data EINA_UNUSED, const Efl_Event *ev EINA_UNUSED)
                 efl_pack(box, efl_added));
 
    attribute_factory = efl_add(EFL2_TEXT_ATTRIBUTE_FACTORY, efl_main_loop_get());
-   cursor_start = efl2_ui_text_cursor_new(ui_text);
-   cursor_end = efl2_ui_text_cursor_new(ui_text);
-   
+   cursor_main = efl2_text_raw_editable_main_cursor_get(ui_text);
+   cursor_start = efl_add(EFL2_TEXT_CURSOR, ui_text);
+   cursor_end = efl_add(EFL2_TEXT_CURSOR, ui_text);
+   efl2_text_raw_editable_selection_cursors_get(ui_text, &sel_start, &sel_end); // Can be called on ui_text ?
+
    //     ----------------  Bold Check Box
 
     content = efl_add(EFL_UI_TEXT_CLASS, win,
