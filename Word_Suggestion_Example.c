@@ -26,7 +26,7 @@ static const char* word_at_position(Eo *ui_text, Eina_Position2D pos)
 {
    //Get word at position
    efl2_text_cursor_coord_set(cursor_start,pos.x, pos.y);
-   efl2_text_cursor_coord_set(cursor_end,pos.x, pos.y);
+   efl2_text_cursor_copy(cursor_start, cursor_end);
 
    efl2_text_cursor_word_start(cursor_start);
    efl2_text_cursor_word_end(cursor_end);
