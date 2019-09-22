@@ -1,3 +1,11 @@
+/*********** Suggestions Context Menu *****************
+ * This is simple example shows how to implement Suggestions Context
+ * menu on text using EFL Text Context Menu
+ * 
+ * 
+ * On Right Click/Long Press Show a List Of Word Suggestions
+*/
+
 #define EFL_BETA_API_SUPPORT 1
 #include <Eina.h>
 #include <Elementary.h>
@@ -12,11 +20,11 @@ static const char *suggestions[] = {
 
 /************ EFL Suggestions Context Menu Logic ******************/
 
+Eo *cursor_start, *cursor_end;
+
 static const char* word_at_position(Eo *ui_text, Eina_Position2D pos)
 {
    //Get word at position
-   Eo *cursor_start = efl2_ui_text_cursor_new(ui_text);
-   Eo *cursor_end = efl2_ui_text_cursor_new(ui_text);
    efl2_text_cursor_coord_set(cursor_start,pos.x, pos.y);
    efl2_text_cursor_coord_set(cursor_end,pos.x, pos.y);
 
@@ -24,12 +32,7 @@ static const char* word_at_position(Eo *ui_text, Eina_Position2D pos)
    efl2_text_cursor_word_end(cursor_end);
    efl2_text_cursor_char_next(cursor_end); // workaround to get word end
 
-   const char * text = efl2_text_cursor_range_text_get(cursor_start, cursor_end);
-
-   efl_del(cursor_start);
-   efl_del(cursor_end);
-
-   return text;
+   return efl2_text_cursor_range_text_get(cursor_start, cursor_end);
 }
 
 static void
@@ -105,6 +108,9 @@ efl_main(void *data EINA_UNUSED, const Efl_Event *ev EINA_UNUSED)
            efl_pack(box, efl_added),
            efl_event_callback_add(efl_added, EFL_INPUT_EVENT_CLICKED,
                                   _gui_quit_cb, efl_added));
+
+   cursor_start = efl_add(EFL2_TEXT_CURSOR, ui_text);
+   cursor_end = efl_add(EFL2_TEXT_CURSOR, ui_text);
 }
 EFL_MAIN()
 
