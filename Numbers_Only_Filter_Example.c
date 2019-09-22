@@ -44,28 +44,27 @@ _ui_text_changed_user_pre_cb(void *data, const Efl_Event *event)
              return;
           }
 
-        char *new_content = (char *)calloc(info->length + 1, sizeof(char));
-        memset(new_content, 0, info->length + 1);
-        char *b = new_content;
+        char *new_content = (char *)calloc(info->length + 1, sizeof(char)), *new_p;
+        new_p = new_content;
 
         while (*p)
           {
              if (IS_DIGIT(*p))
                {
-                  *b++ = *p;
+                  *new_p++ = *p;
                }
              p++;
           }
-        *b = '\0';
+        *new_p = '\0';
+
+        // Should i update info->length property with new string length?
+        info->length = strlen(new_content);
 
         // can i free info->content and let it point to new location?
-        // so i don't have to re-copy text back to its buffer?
+        // so i don't have to re-copy text back to original buffer?
         memcpy(info->content, new_content, info->length + 1);
 
         free(new_content);
-
-        // Should i update info->length property with new string length?
-        info->length = strlen(info->content);
      }
 }
 
