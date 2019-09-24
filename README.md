@@ -10,7 +10,7 @@ Others
 - Filers (Numbers only)
 - Text in specific format/Layout  (ZipCode/phoneNumber/IpAddress like 99-9999 '- auto inserted')
 - Text tool-tips (When mouse cursor above certian area on Text Widget)
-- PlaceHolder text (styles)
+- ~~PlaceHolder text (styles)~~
 - Context Menu to auto correct word (show options on context menu)
 - Clickable Hyperlinks, Open hyperlink events
 - Auto Capital First letter on paragraph when inserted by user (on/off)
