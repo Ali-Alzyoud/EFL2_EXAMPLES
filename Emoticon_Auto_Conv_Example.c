@@ -42,36 +42,32 @@ static const emoticon_item emoticon_list[] = {
     {"D-:", "&#x1F626;"},    // 😦 &#x1F626;
     {":'-(", "&#x1F622;"},   // 😢 &#x1F622;
     {":-@", "&#x1F624;"},    // 😤 &#x1F624;
-    {":poop:", "&#x1F4A9;"}, // 💩 &#x1F4A9;
     {"<3", "&#x2764;"},      // ❤ &#x2764;
-                             //  {"</3", ""}, // &#1F494;
     {":-(", "&#x2639;"},     // ☹ &#x2639;
     {NULL, NULL}};
 
-static int
+static Eina_Bool
 _string_compare_reverse(const char *first, const char *second)
 {
    const char *p1 = first, *p2 = second;
 
    if (!first || !second)
-        return 0;
+     return EINA_FALSE;
 
-   while (*p1++)
-        ;
-   while (*p2++)
-        ;
+   while (*p1++);
+   while (*p2++);
 
    while (p2 != second)
      {
         p1--;
         p2--;
-        if (*p1 != *p2 || (p1 == first && p2 != second))
+        if (*p1 != *p2 || (p1 == first))
           {
-             return 0;
+             return EINA_FALSE;
           }
      }
 
-   return 1;
+   return EINA_TRUE;
 }
 
 static emoticon_item *
@@ -82,13 +78,15 @@ _emoticon_shortcut_matcher_get(const char *shortcut)
      {
         if (_string_compare_reverse(shortcut, p->shortcut))
           {
-               return p;
+             return p;
           }
         p++;
      }
    return NULL;
 }
 /**************************************************/
+
+
 
 /********* Efl Emoticon Auto Conver Logic *********/
 static Eo *emoticon_cursor = NULL;
@@ -98,7 +96,7 @@ static void
 _emoticon_release(void)
 {
    if (emoticon_cursor)
-        efl_del(emoticon_cursor);
+     efl_del(emoticon_cursor);
    emoticon_cursor = NULL;
    active_emoticon_item = NULL;
 }
@@ -121,7 +119,7 @@ _ui_text_changed_user(void *data, const Efl_Event *event)
              else
                {
                   if (!emoticon_cursor)
-                       emoticon_cursor = efl2_ui_text_cursor_new(ui_text);
+                    emoticon_cursor = efl2_ui_text_cursor_new(ui_text);
 
                   efl2_text_cursor_position_set(emoticon_cursor, (info->position < 5) ? 0 : info->position - 5);
 
@@ -149,7 +147,7 @@ _ui_text_changed_user(void *data, const Efl_Event *event)
 
                    size_t s = strlen(active_emoticon_item->shortcut);
                    while (s--)
-                        efl2_text_cursor_char_next(ui_text, curs);
+                     efl2_text_cursor_char_next(ui_text, curs);
                 }
              _emoticon_release();
           }
