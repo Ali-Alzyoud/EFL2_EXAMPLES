@@ -46,37 +46,41 @@ static const emoticon_item emoticon_list[] = {
     {":-(", "&#x2639;"},     // ☹ &#x2639;
     {NULL, NULL}};
 
-static Eina_Bool
-_string_compare_reverse(const char *first, const char *second)
+/* 
+ * Compare strings in reverse order by maximum length len
+*/
+static int
+strrncmp(const char *str1, const char *str2, size_t len)
 {
-   const char *p1 = first, *p2 = second;
+   size_t len1 = strlen(str1);
+   size_t len2 = strlen(str2);
+   unsigned char c1,c2;
 
-   if (!first || !second)
-     return EINA_FALSE;
+   if (len>len1)
+     len = len1;
 
-   while (*p1++);
-   while (*p2++);
+   if (len>len2)
+     len = len2;
 
-   while (p2 != second)
+   while (len)
      {
-        p1--;
-        p2--;
-        if (*p1 != *p2 || (p1 == first))
-          {
-             return EINA_FALSE;
-          }
+        c1 = (unsigned char) str1[len1 - len];
+        c2 = (unsigned char) str2[len2 - len];
+         if (c1 != c2)
+           return (c1 - c2);
+         len--;
      }
 
-   return EINA_TRUE;
+   return 0;
 }
 
 static emoticon_item *
-_emoticon_shortcut_matcher_get(const char *shortcut)
+_emoticon_shortcut_matcher_get(const char *str)
 {
    emoticon_item *p = (emoticon_item *)emoticon_list;
    while (p->shortcut)
      {
-        if (_string_compare_reverse(shortcut, p->shortcut))
+        if (!strrncmp(str, p->shortcut, strlen(p->shortcut)))
           {
              return p;
           }
